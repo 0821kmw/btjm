@@ -224,7 +224,7 @@
       <!-- SEC 4: REQUESTS -->
       <section id="sec-requests" class="hidden space-y-6 max-w-4xl">
         <div class="bg-chzzk-card border border-chzzk-border p-6 rounded-2xl shadow-xl space-y-4">
-          <h3 class="text-sm font-bold text-slate-100 flex items-center gap-2"><i class="fa-solid fa-comments text-chzzk"></i> 시청자 요청함</h3>
+          <h3 class="text-sm font-bold text-slate-100 flex items-center gap-2"><i class="fa-solid fa-comments text-chzzk"></i> 시청자 요청함 관리</h3>
           <div id="request-list-container" class="space-y-3"></div>
         </div>
       </section>
@@ -271,6 +271,48 @@
       </section>
 
     </main>
+  </div>
+
+  <!-- REQUEST EDIT MODAL -->
+  <div id="modal-edit-request" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-chzzk-card border border-chzzk-border p-6 rounded-2xl max-w-md w-full shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-chzzk-border pb-3">
+        <h3 class="font-bold text-sm text-chzzk flex items-center gap-2"><i class="fa-solid fa-pen-to-square"></i> 시청자 요청 수정</h3>
+        <button onclick="closeEditRequestModal()" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+      <form onsubmit="handleRequestUpdate(event)" class="space-y-3">
+        <input type="hidden" id="edit-req-id">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-slate-300 mb-1 font-semibold">구분</label>
+            <select id="edit-req-type" class="w-full bg-slate-950 border border-chzzk-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-chzzk">
+              <option value="영상 누락/오류 신고">영상 누락/오류 신고</option>
+              <option value="타임라인 제보">타임라인 제보</option>
+              <option value="건의사항">건의사항</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-slate-300 mb-1 font-semibold">처리 상태</label>
+            <select id="edit-req-status" class="w-full bg-slate-950 border border-chzzk-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-chzzk">
+              <option value="대기중">대기중</option>
+              <option value="완료">완료</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs text-slate-300 mb-1 font-semibold">작성자 닉네임</label>
+          <input type="text" id="edit-req-author" class="w-full bg-slate-950 border border-chzzk-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-chzzk">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-300 mb-1 font-semibold">요청 내용</label>
+          <textarea id="edit-req-content" rows="4" required class="w-full bg-slate-950 border border-chzzk-border rounded-xl p-3 text-xs text-white focus:outline-none focus:border-chzzk leading-relaxed"></textarea>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeEditRequestModal()" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300">취소</button>
+          <button type="submit" class="px-4 py-2 rounded-xl text-xs font-extrabold bg-chzzk text-black hover:bg-chzzk-hover shadow">수정 저장</button>
+        </div>
+      </form>
+    </div>
   </div>
 
   <!-- Firebase SDK -->
@@ -565,14 +607,54 @@
             <div>
               <span class="font-extrabold text-chzzk">[${r.type}]</span>
               <span class="font-bold text-slate-200 ml-1">${r.author}</span>
-              <span class="text-slate-500 text-[11px] ml-1">(${r.date})</span>
+              <span class="text-slate-500 text-[11px] ml-1">(${r.date || ''})</span>
+              <span class="ml-2 px-2 py-0.5 rounded text-[10px] font-bold ${r.status === '완료' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'}">${r.status || '대기중'}</span>
             </div>
-            <button onclick="deleteRequest('${r.id}')" class="text-red-400 text-xs"><i class="fa-solid fa-trash"></i></button>
+            <div class="flex items-center gap-1.5">
+              <button onclick="editRequest('${r.id}')" class="px-2.5 py-1 rounded-lg text-xs bg-slate-800 text-slate-200 border border-slate-700 hover:border-chzzk/50"><i class="fa-solid fa-pen"></i> 수정</button>
+              <button onclick="deleteRequest('${r.id}')" class="px-2.5 py-1 rounded-lg text-xs bg-red-950/40 text-red-300 border border-red-800/60"><i class="fa-solid fa-trash"></i> 삭제</button>
+            </div>
           </div>
           <p class="text-xs text-slate-300 whitespace-pre-line leading-relaxed">${r.content}</p>
         </div>
       `).join('');
     }
+
+    window.editRequest = function(id) {
+      const req = requests.find(r => r.id === id);
+      if (!req) return;
+      document.getElementById('edit-req-id').value = req.id;
+      document.getElementById('edit-req-type').value = req.type || '건의사항';
+      document.getElementById('edit-req-author').value = req.author || '';
+      document.getElementById('edit-req-status').value = req.status || '대기중';
+      document.getElementById('edit-req-content').value = req.content || '';
+      document.getElementById('modal-edit-request').classList.remove('hidden');
+    };
+
+    window.closeEditRequestModal = function() {
+      document.getElementById('modal-edit-request').classList.add('hidden');
+    };
+
+    window.handleRequestUpdate = async function(e) {
+      e.preventDefault();
+      const id = document.getElementById('edit-req-id').value;
+      const type = document.getElementById('edit-req-type').value;
+      const author = document.getElementById('edit-req-author').value.trim() || '익명';
+      const status = document.getElementById('edit-req-status').value;
+      const content = document.getElementById('edit-req-content').value.trim();
+
+      try {
+        await setDoc(doc(db, "requests", id), {
+          type, author, status, content,
+          updatedAt: Date.now()
+        }, { merge: true });
+        
+        alert('요청 내용이 수정되었습니다.');
+        closeEditRequestModal();
+      } catch (err) {
+        alert('수정 중 오류 발생: ' + err.message);
+      }
+    };
 
     window.deleteRequest = async function(id) {
       if(!confirm('삭제하시겠습니까?')) return;
