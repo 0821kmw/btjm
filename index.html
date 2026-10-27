@@ -68,9 +68,7 @@
 
   <!-- Navigation / Categories -->
   <nav class="bg-slate-950 border-b border-chzzk-border sticky top-[65px] z-30">
-    <div class="max-w-7xl mx-auto px-4 flex items-center gap-2 overflow-x-auto py-2.5 no-scrollbar" id="category-bar">
-      <!-- 동적 카테고리가 여기에 로드됨 -->
-    </div>
+    <div class="max-w-7xl mx-auto px-4 flex items-center gap-2 overflow-x-auto py-2.5 no-scrollbar" id="category-bar"></div>
   </nav>
 
   <!-- Main Container -->
@@ -88,9 +86,7 @@
     </div>
 
     <!-- Video Grid -->
-    <div id="video-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-      <!-- 동적 영상 카드가 여기에 로드됨 -->
-    </div>
+    <div id="video-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
 
     <!-- Video Player Modal -->
     <div id="modal-player" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
@@ -122,11 +118,7 @@
         <form onsubmit="handleRequestSubmit(event)" class="space-y-3">
           <div>
             <label class="block text-xs text-slate-300 mb-1 font-semibold">구분</label>
-            <select id="req-type" class="w-full bg-slate-950 border border-chzzk-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-chzzk">
-              <option value="영상 누락/오류 신고">영상 누락/오류 신고</option>
-              <option value="타임라인 제보">타임라인 제보</option>
-              <option value="건의사항">건의사항</option>
-            </select>
+            <select id="req-type" class="w-full bg-slate-950 border border-chzzk-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-chzzk"></select>
           </div>
           <div>
             <label class="block text-xs text-slate-300 mb-1 font-semibold">닉네임 (선택)</label>
@@ -148,20 +140,17 @@
           <h3 class="font-bold text-sm text-amber-400 flex items-center gap-2"><i class="fa-solid fa-bullhorn"></i> 공지사항</h3>
           <button onclick="closeModal('notice')" class="text-slate-400 hover:text-white">✕</button>
         </div>
-        <div id="notice-list" class="overflow-y-auto space-y-3 pr-1 flex-1">
-          <!-- 공지사항 목록 로드 -->
-        </div>
+        <div id="notice-list" class="overflow-y-auto space-y-3 pr-1 flex-1"></div>
       </div>
     </div>
 
   </main>
 
-  <!-- Firebase SDK (v9) -->
+  <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
     import { getFirestore, doc, onSnapshot, collection, addDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
-    // 파이어베이스 설정값 (사용자 발급 키)[cite: 5]
     const firebaseConfig = {
       apiKey: "AIzaSyDo0Cp5rBuDCnZJxDhPPOgzr0FF5IxY0f8",
       authDomain: "btjm-a4a4f.firebaseapp.com",
@@ -177,17 +166,18 @@
     let state = {
       videos: [],
       categories: ['전체', '저쳇', '게임', '음악', '합방', '기타'],
+      requestTypes: ['영상 누락/오류 신고', '타임라인 제보', '건의사항'],
       notices: [],
       settings: { siteTitle: '보젬 다시보기', streamerName: '치지직 방송 아카이브' },
       selectedCategory: '전체'
     };
 
-    // 실시간 데이터 수신 (Firestore Realtime)
     onSnapshot(doc(db, "archive", "mainData"), (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         state.videos = data.videos || [];
         state.categories = ['전체', ...(data.categories || ['저쳇', '게임', '음악', '합방', '기타'])];
+        state.requestTypes = data.requestTypes || ['영상 누락/오류 신고', '타임라인 제보', '건의사항'];
         state.notices = data.notices || [];
         state.settings = data.settings || state.settings;
         renderAll();
@@ -216,12 +206,10 @@
     };
 
     function renderAll() {
-      // 1. 브랜딩 적용
       document.getElementById('site-title').textContent = state.settings.siteTitle || '보젬 다시보기';
       document.getElementById('streamer-name').textContent = state.settings.streamerName || '치지직 방송 아카이브';
       document.title = state.settings.siteTitle || '보젬 다시보기';
 
-      // 2. 띠배너 공지
       const bannerNotice = state.notices.find(n => n.asBanner);
       const topBanner = document.getElementById('top-banner');
       if (bannerNotice) {
@@ -231,7 +219,7 @@
         topBanner.classList.add('hidden');
       }
 
-      // 3. 카테고리 바
+      // 카테고리 바
       const catBar = document.getElementById('category-bar');
       catBar.innerHTML = state.categories.map(c => `
         <button onclick="setCategory('${c}')" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${state.selectedCategory === c ? 'bg-chzzk text-black shadow-md chzzk-glow' : 'text-slate-400 hover:text-white bg-chzzk-card/60 border border-chzzk-border/50'}">
@@ -239,10 +227,14 @@
         </button>
       `).join('');
 
-      // 4. 영상 리스트
+      // 시청자 요청 구단 셀렉트박스 동적 렌더링
+      const reqSelect = document.getElementById('req-type');
+      if (reqSelect) {
+        reqSelect.innerHTML = state.requestTypes.map(rt => `<option value="${rt}">${rt}</option>`).join('');
+      }
+
       renderVideos();
 
-      // 5. 공지사항 모달
       const noticeList = document.getElementById('notice-list');
       if (state.notices.length === 0) {
         noticeList.innerHTML = `<p class="text-slate-500 text-xs text-center py-6">등록된 공지사항이 없습니다.</p>`;
@@ -268,7 +260,6 @@
     window.renderVideos = function() {
       const grid = document.getElementById('video-grid');
       const search = document.getElementById('search-input').value.trim().toLowerCase();
-
       let filtered = state.videos;
 
       if (state.selectedCategory !== '전체') {
