@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>치지직 아카이브 - 최고 관리자 대시보드</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            chzzk: '#00ffa3',
+            'chzzk-dark': '#00cc82',
+            'chzzk-hover': '#1affb0',
+            'chzzk-bg': '#0a0e17',
+            'chzzk-card': '#121824',
+            'chzzk-header': '#0f1523',
+            'chzzk-border': '#1e293b'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { background-color: #0a0e17; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
+    .chzzk-glow { box-shadow: 0 0 15px rgba(0, 255, 163, 0.25); }
+    .chzzk-text-glow { text-shadow: 0 0 10px rgba(0, 255, 163, 0.4); }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #0a0e17; }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #00ffa3; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-chzzk selection:text-black">
+
+  <!-- ==================== SECURITY AUTH MODAL ==================== -->
+  <div id="modal-auth" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
+    <div class="bg-chzzk-card border border-chzzk-border p-8 rounded-2xl max-w-md w-full shadow-2xl space-y-6">
+      <div class="text-center space-y-2">
+        <div class="w-14 h-14 rounded-2xl bg-chzzk text-black flex items-center justify-center text-2xl font-black mx-auto shadow-lg chzzk-glow">
+          <i class="fa-solid fa-shield-halved"></i>
+        </div>
+        <h2 class="text-xl font-black text-slate-100 tracking-tight">관리자 인증</h2>
+        <p class="text-xs text-slate-400">최고 관리자 전용 대시보드 접근을 위해 비밀번호를 입력하세요.</p>
+      </div>
+
+      <form onsubmit="handleAdminLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">비밀번호</label>
+          <!-- 비밀번호 입력창 + 눈 아이콘 토글 버튼 (가려지지 않도록 type="text" 기본 적용 및 토글 기능) -->
+          <div class="relative flex items-center">
+            <input type="text" id="auth-password-input" placeholder="비밀번호 입력 (기본: admin1234)" required class="w-full bg-slate-950 border border-chzzk-border rounded-xl pl-4 pr-12 py-3 text-sm text-white focus:outline-none focus:border-chzzk transition-colors">
+            <button type="button" onclick="togglePassVisibility()" class="absolute right-3 text-slate-400 hover:text-chzzk text-base p-1.5 transition-colors" title="비밀번호 표시/숨기기">
+              <i id="pass-toggle-icon" class="fa-solid fa-eye"></i>
+            </button>
+          </div>
+        </div>
+        
+        <button type="submit" class="w-full bg-chzzk hover:bg-chzzk-hover text-black font-extrabold py-3 rounded-xl text-sm shadow-lg transition-all chzzk-glow flex items-center justify-center gap-2">
+          <i class="fa-solid fa-key"></i> 관리자 대시보드 접속
+        </button>
+      </form>
+      <div class="text-center">
+        <p class="text-[11px] text-slate-500">기본 관리자 비밀번호: <span class="text-chzzk font-mono">admin1234</span></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MAIN DASHBOARD CONTENT ==================== -->
+  <div id="dashboard-app" class="hidden flex-1 flex flex-col">
+    
+    <!-- Admin Header -->
+    <header class="bg-chzzk-header border-b border-chzzk-border sticky top-0 z-40">
+      <div class="max-w-7xl mx-auto px-4 py-3.5 flex flex-col sm:flex-row items-center justify-between gap-4">
+        
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-chzzk flex items-center justify-center font-black text-black text-xl shadow-lg chzzk-glow">
+            <i class="fa-solid fa-sliders"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 id="header-site-title" class="text-lg font-black text-chzzk tracking-tight chzzk-text-glow">ADMIN DASHBOARD</h1>
+              <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-chzzk/20 text-chzzk border border-chzzk/40">MASTER</span>
+            </div>
+            <p id="header-streamer-name" class="text-xs text-slate-400 font-medium">치지직 방송 아카이브 관리 시스템</p>
+          </div>
+        </div>
+
+        <!-- Quick Status & Logout -->
+        <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
+          <button onclick="handleLogout()" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 flex items-center gap-1.5 transition-colors">
+            <i class="fa-solid fa-right-from-bracket text-red-400"></i> 로그아웃
+          </button>
+        </div>
+
+      </div>
+    </header>
+
+    <!-- Sub Navigation Bar -->
+    <nav class="bg-slate-950 border-b border-chzzk-border">
+      <div class="max-w-7xl mx-auto px-4 flex items-center gap-2 overflow-x-auto py-2 no-scrollbar">
+        <button id="tab-videos" onclick="switchTab('videos')" class="px-4 py-2 rounded-xl text-xs font-bold transition-all bg-chzzk text-black whitespace-nowrap">
+          <i class="fa-solid fa-video mr-1.5"></i>다시보기 영상 관리
+        </button>
+        <button id="tab-categories" onclick="switchTab('categories')" class="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-white whitespace-nowrap">
+          <i class="fa-solid fa-tags mr-1.5"></i>동적 카테고리/태그 설정
+        </button>
+        <button id="tab-notices" onclick="switchTab('notices')" class="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-white whitespace-nowrap">
+          <i class="fa-solid fa-bullhorn mr-1.5"></i>공지사항 & 배너
+        </button>
+        <button id="tab-requests" onclick="switchTab('requests')" class="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-white whitespace-nowrap">
+          <i class="fa-solid fa-comments mr-1.5"></i>시청자 요청함
+        </button>
+        <button id="tab-settings" onclick="switchTab('settings')" class="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-white whitespace-nowrap">
+          <i class="fa-solid fa-gear mr-1.5"></i>시스템 설정 & 데이터 백업
+        </button>
+      </div>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-6">
+
+      <!-- SECTION 1: VIDEOS MANAGEMENT -->
+      <section id="sec-videos" class="space-y-6">
+        
+        <!-- Video Add / Edit Form -->
+        <div class="bg-chzzk-card border border-chzzk-border p-6 rounded-2xl shadow-xl space-y-4">
+          <div class="flex items-center justify-between border-b border-chzzk-border pb-3">
+            <h3 id="video-form-title" class="text-sm font-bold text-chzzk flex items-center gap-2">
+              <i class="fa-solid fa-circle-plus"></i> 새 다시보기 영상 등록
+            </h3>
+            <button type="button" onclick="resetVideoForm()" class="text-xs text-slate-400 hover:text-slate-200">
+              <i class="fa-solid fa-rotate-left mr-1"></i>양식 초기화
+            </button>
+          </div>
+
+          <form id="video-form" onsubmit="handleVideoSubmit(event)" class="space-y-4">
+            <input type="hidden" id="v-id">
+            
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">카테고리 선택</label>
+                <select id="v-category" required class="w-full bg-slate-950 border border-chzzk-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-chzzk">
+                  <!-- Populated dynamically -->
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">방송 날짜</label>
+                <input type="date" id="v-date" required class="w-full bg-slate-950 border border-chzzk-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-chzzk">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">상단 고정 여부</label>
+                <label class="flex items-center gap-2 bg-slate-950 border border-chzzk-border rounded-xl px-3 py-2 text-xs text-slate-300 cursor-pointer h-[38px]">
+                  <input type="checkbox" id="v-pinned" class="accent-emerald-400 rounded">
+                  <span class="font-bold text-chzzk"><i class="fa-solid fa-thumbtack mr-1"></i>리스트 상단 고정</span>
+                </label>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">영상 제목</label>
+              <input type="text" id="v-title" placeholder="방송 제목을 입력하세요" required class="w-full bg-slate-950 border border-chzzk-border rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-chzzk">
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">유튜브 URL (일반/쇼츠/embed 자동 인식)</label>
+              <input type="url" id="v-url" placeholder="https://www.youtube.com/watch?v=..." required class="w-full bg-slate-950 border border-chzzk-border rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-chzzk">
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">영상 설명 / 타임라인 기록</label>
+              <textarea id="v-desc" rows="3" placeholder="00:00 오프닝&#10;12:30 근황 토크&#10;45:00 게임 시작" class="w-full bg-slate-950 border border-chzzk-border rounded-xl p-3 text-xs text-white focus:outline-none focus:border-chzzk leading-relaxed"></textarea>
+            </div>
+
+            <div class="flex justify-end gap-2">
+              <button type="submit" id="btn-video-submit" class="px-6 py-2.5 rounded-xl text-xs font-extrabold bg-chzzk hover:bg-chzzk-hover text-black shadow-lg transition-all chzzk-glow flex items-center gap-1.5">
+                <i class="fa-solid fa-floppy-disk"></i> 영상 데이터 저장
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Video List & Manual Order Manager -->
+        <div class="space-y-4">
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <h3 class="text-sm font-bold text-slate-200 flex items-center gap-1.5">
+              <i class="fa-solid fa-list-ol text-chzzk"></i> 등록된 영상 목록 (<span id="count-videos">0</span>)
+            </h3>
+            <div class="flex items-center gap-2">
+              <input type="text" id="filter-video-search" oninput="renderVideoList()" placeholder="제목 또는 카테고리 검색..." class="bg-slate-950 border border-chzzk-border rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-chzzk min-w-[220px]">
+            </div>
+          </div>
+
+          <div id="video-list-container" class="space-y-2.5"></div>
+        </div>
+
+      </section>
+
+      <!-- SECTION 2: DYNAMIC CATEGORY / TAG MANAGER -->
+      <section id="sec-categories" class="hidden space-y-6 max-w-4xl">
+        <div class="bg-chzzk-card border border-chzzk-border p-6 rounded-2xl shadow-xl space-y-5">
+          <div>
+            <h3 class="text-sm font-bold text-slate-100 flex items-center gap-2">
+              <i class="fa-solid fa-tags text-chzzk"></i> 동적 카테고리 관리
+            </h3>
+            <p class="text-xs text-slate-400 mt-1">소스 코드를 직접 수정할 필요 없이 관리자 화면에서 카테고리를 자유롭게 추가/수정/삭제/순서변경 합니다.</p>
+          </div>
+
+          <!-- Add Category Form -->
+          <form onsubmit="handleAddCategory(event)" class="flex flex-col sm:flex-row gap-2 pt-2 border-t border-chzzk-border/60">
+            <input type="text" id="cat-new-name" placeholder="새 카테고리 이름 (예: IRL, 소통, 노가리, 종겜)" required class="flex-1 bg-slate-950 border border-chzzk-border rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-chzzk">
+            <button type="submit" class="bg-chzzk hover:bg-chzzk-hover text-black font-extrabold px-5 py-2.5 rounded-xl text-xs transition-all whitespace-nowrap">
+              <i class="fa-solid fa-plus mr-1"></i> 카테고리 생성
+            </button>
+          </form>
+
+          <div class="pt-4 border-t border-chzzk-border/60">
+            <h4 class="text-xs font-bold text-slate-300 mb-3">현재 활성화된 카테고리 순서</h4>
+            <div id="category-list-container" class="space-y-2"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 3: NOTICE & BANNER MANAGER -->
+      <section id="sec-notices" class="hidden space-y-6 max-w-4xl">
+        <div class="bg-chzzk-card border border-chzzk-border p-6 rounded-2xl shadow-xl space-y-4">
+          <h3 id="notice-form-title" class="text-sm font-bold text-chzzk flex items-center gap-2">
+            <i class="fa-solid fa-bullhorn"></i> 새 공지사항 작성
+          </h3>
+
+          <form id="notice-form" onsubmit="handleNoticeSubmit(event)" class="space-y-4">
+            <input type="hidden" id="n-id">
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">작성 날짜</label>
+                <input type="date" id="n-date" required class="w-full bg-slate-950 border border-chzzk-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-chzzk">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">상단 띠배너 노출 여부</label>
+                <label class="flex items-center gap-2 bg-slate-950 border border-chzzk-border rounded-xl px-3 py-2 text-xs text-slate-300 cursor-pointer h-[38px]">
+                  <input type="checkbox" id="n-as-banner" class="accent-emerald-400 rounded">
+                  <span class="font-bold text-chzzk"><i class="fa-solid fa-scroll mr-1"></i>사이트 최상단 띠배너 게시</span>
+                </label>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">공지 제목</label>
+              <input type="text" id="n-title" placeholder="공지사항 제목" required class="w-full bg-slate-950 border border-chzzk-border rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-chzzk">
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">공지 본문 내용</label>
+              <textarea id="n-desc" rows="3" placeholder="상세 공지 내용을 입력하세요." required class="w-full bg-slate-950 border border-chzzk-border rounded-xl p-3 text-xs text-white focus:outline-none focus:border-chzzk leading-relaxed"></textarea>
+            </div>
+
+            <div class="flex justify-end gap-2">
+              <button type="button" onclick="resetNoticeForm()" class="px-4 py-2 rounded-xl text-xs bg-slate-800 text-slate-300">초기화</button>
+              <button type="submit" class="px-6 py-2 rounded-xl text-xs font-extrabold bg-chzzk hover:bg-chzzk-hover text-black shadow-lg">
+                공지사항 저장
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div class="space-y-3">
+          <h3 class="text-sm font-bold text-slate-200">등록된 공지 목록</h3>
+          <div id="notice-list-container" class="space-y-2.5"></div>
+        </div>
+      </section>
+
+      <!-- SECTION 4: VIEWER REQUEST & FEEDBACK BOARD -->
+      <section id="sec-requests" class="hidden space-y-6 max-w-4xl">
+        <div class="bg-chzzk-card border border-chzzk-border p-6 rounded-2xl shadow-xl space-y-4">
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-b border-chzzk-border pb-4">
+            <div>
+              <h3 class="text-sm font-bold text-slate-100 flex items-center gap-2">
+                <i class="fa-solid fa-comments text-chzzk"></i> 시청자 요청 및 피드백 처리 센터
+              </h3>
+              <p class="text-xs text-slate-400 mt-0.5">시청자가 입력한 다시보기 요청 및 피드백을 검토하고 처리 상태를 업데이트합니다.</p>
+            </div>
+            <select id="req-filter-status" onchange="renderRequestList()" class="bg-slate-950 border border-chzzk-border rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-chzzk">
+              <option value="ALL">전체 보기</option>
+              <option value="대기중">⏳ 대기중</option>
+              <option value="처리완료">✅ 처리완료</option>
+              <option value="거절됨">❌ 거절됨</option>
+            </select>
+          </div>
+
+          <div id="request-list-container" class="space-y-3"></div>
+        </div>
+      </section>
+
+      <!-- SECTION 5: SETTINGS & BACKUP/RESTORE -->
+      <section id="sec-settings" class="hidden space-y-6 max-w-4xl">
+        
+        <!-- Branding Settings -->
+        <div class="bg-chzzk-card border border-chzzk-border p-6 rounded-2xl shadow-xl space-y-4">
+          <h3 class="text-sm font-bold text-chzzk flex items-center gap-2">
+            <i class="fa-solid fa-sliders"></i> 사이트 브랜딩 설정
+          </h3>
+          
+          <form onsubmit="handleSaveSettings(event)" class="space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">사이트 상단 로고 타이틀</label>
+                <input type="text" id="set-site-title" required class="w-full bg-slate-950 border border-chzzk-border rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-chzzk">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">스트리머/채널 서브 타이틀</label>
+                <input type="text" id="set-streamer-name" required class="w-full bg-slate-950 border border-chzzk-border rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-chzzk">
+              </div>
+            </div>
+            <div class="flex justify-end">
+              <button type="submit" class="bg-chzzk hover:bg-chzzk-hover text-black font-extrabold px-5 py-2 rounded-xl text-xs transition-all">
+                브랜딩 설정 저장
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Password Change -->
+        <div class="bg-chzzk-card border border-chzzk-border p-6 rounded-2xl shadow-xl space-y-4">
+          <h3 class="text-sm font-bold text-chzzk flex items-center gap-2">
+            <i class="fa-solid fa-key"></i> 관리자 비밀번호 변경
+          </h3>
+          
+          <form onsubmit="handleChangePassword(event)" class="space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">현재 비밀번호</label>
+                <input type="password" id="pass-current" required placeholder="현재 비밀번호" class="w-full bg-slate-950 border border-chzzk-border rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-chzzk">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">새로운 비밀번호</label>
+                <input type="password" id="pass-new" required placeholder="새 비밀번호 입력" class="w-full bg-slate-950 border border-chzzk-border rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-chzzk">
+              </div>
+            </div>
+            <div class="flex justify-end">
+              <button type="submit" class="bg-chzzk hover:bg-chzzk-hover text-black font-extrabold px-5 py-2 rounded-xl text-xs transition-all">
+                비밀번호 변경
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Backup & Restore Data -->
+        <div class="bg-chzzk-card border border-chzzk-border p-6 rounded-2xl shadow-xl space-y-4">
+          <h3 class="text-sm font-bold text-chzzk flex items-center gap-2">
+            <i class="fa-solid fa-database"></i> 데이터 통합 백업 및 복원 (JSON)
+          </h3>
+          <p class="text-xs text-slate-400">등록된 영상, 카테고리, 공지사항, 요청글 데이터를 포함한 전체 데이터를 JSON 파일로 내보내거나 복원합니다.</p>
+
+          <div class="flex flex-wrap items-center gap-3 pt-2">
+            <button onclick="exportJSON()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-2 transition-all">
+              <i class="fa-solid fa-download text-chzzk"></i> JSON 내보내기 (백업)
+            </button>
+
+            <label class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-2 cursor-pointer transition-all">
+              <i class="fa-solid fa-upload text-chzzk"></i> JSON 가져오기 (복원)
+              <input type="file" accept=".json" onchange="importJSON(event)" class="hidden">
+            </label>
+
+            <button onclick="resetDefaults()" class="bg-red-950/40 hover:bg-red-900/60 border border-red-800/60 text-red-300 font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-2 ml-auto transition-all">
+              <i class="fa-solid fa-triangle-exclamation"></i> 데모 데이터로 초기화
+            </button>
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+
+  </div>
+
+  <!-- ==================== CORE JAVASCRIPT ==================== -->
+  <script>
+    /* LOCALSTORAGE KEYS SYNCED WITH ARCHIVE APP */
+    const STORAGE_KEYS = {
+      VIDEOS: 'STREAM_REPLAY_DATA_V2',
+      CATEGORIES: 'STREAM_CATEGORIES_V1',
+      NOTICES: 'STREAM_NOTICES_V1',
+      REQUESTS: 'STREAM_REQUEST_DATA_V1',
+      SETTINGS: 'STREAM_SITE_SETTINGS_V1',
+      ADMIN_PASS: 'STREAM_ADMIN_PASS_V1'
+    };
+
+    // Default Fallback Data
+    const DEFAULT_CATEGORIES = ['저쳇', '게임', '음악', '합방', '기타'];
+    const DEFAULT_SETTINGS = {
+      siteTitle: 'REPLAY ARCHIVE',
+      streamerName: '치지직 방송 다시보기 관리자'
+    };
+    const DEFAULT_VIDEOS = [
+      {
+        id: 'v1',
+        category: '저쳇',
+        title: '방송 시작! 저챗 & 최근 일상 토크 다시보기',
+        url: 'https://www.youtube.com/watch?v=9BQTcOWL-X8',
+        date: '2026-10-26',
+        pinned: true,
+        desc: '00:00 오프닝\n15:30 근황 토크\n45:10 시청자 Q&A'
+      },
+      {
+        id: 'v2',
+        category: '게임',
+        title: '신작 게임 대규모 업데이트 소식 플레이',
+        url: 'https://youtu.be/dQw4w9WgXcQ',
+        date: '2026-10-25',
+        pinned: false,
+        desc: '신규 던전 공략 및 라이브 테스트'
+      }
+    ];
+
+    let isAuthenticated = false;
+    let currentTab = 'videos';
+
+    /* Read / Write Storage Helpers */
+    function getStoredData(key, fallback) {
+      try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : fallback;
+      } catch (e) {
+        return fallback;
+      }
+    }
+
+    function setStoredData(key, data) {
+      localStorage.setItem(key, JSON.stringify(data));
+    }
+
+    function extractYoutubeId(url) {
+      if(!url) return null;
+      const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|shorts\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+      const match = url.match(regExp);
+      return (match && match[2].length === 11) ? match[2] : null;
+    }
+
+    /* PASSWORD VISIBILITY TOGGLE */
+    function togglePassVisibility() {
+      const input = document.getElementById('auth-password-input');
+      const icon = document.getElementById('pass-toggle-icon');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'fa-solid fa-eye-slash text-chzzk';
+      } else {
+        input.type = 'password';
+        icon.className = 'fa-solid fa-eye';
+      }
+    }
+
+    /* AUTHENTICATION */
+    function handleAdminLogin(e) {
+      e.preventDefault();
+      const inputPass = document.getElementById('auth-password-input').value;
+      const currentPass = localStorage.getItem(STORAGE_KEYS.ADMIN_PASS) || 'admin1234';
+
+      if (inputPass === currentPass) {
+        isAuthenticated = true;
+        document.getElementById('modal-auth').classList.add('hidden');
+        document.getElementById('dashboard-app').classList.remove('hidden');
+        initDashboard();
+      } else {
+        alert('비밀번호가 올바르지 않습니다.');
+      }
+    }
+
+    function handleLogout() {
+      isAuthenticated = false;
+      document.getElementById('auth-password-input').value = '';
+      document.getElementById('dashboard-app').classList.add('hidden');
+      document.getElementById('modal-auth').classList.remove('hidden');
+    }
+
+    /* INIT DASHBOARD */
+    function initDashboard() {
+      applyBranding();
+      populateCategorySelect('v-category');
+      renderVideoList();
+      renderCategoryList();
+      renderNoticeList();
+      renderRequestList();
+      loadSettingsForm();
+    }
+
+    function applyBranding() {
+      const settings = getStoredData(STORAGE_KEYS.SETTINGS, DEFAULT_SETTINGS);
+      document.getElementById('header-site-title').textContent = settings.siteTitle || DEFAULT_SETTINGS.siteTitle;
+      document.getElementById('header-streamer-name').textContent = settings.streamerName || DEFAULT_SETTINGS.streamerName;
+    }
+
+    /* TAB SWITCHING */
+    function switchTab(tab) {
+      currentTab = tab;
+      ['videos', 'categories', 'notices', 'requests', 'settings'].forEach(t => {
+        const btn = document.getElementById(`tab-${t}`);
+        const sec = document.getElementById(`sec-${t}`);
+        if(t === tab) {
+          btn.className = 'px-4 py-2 rounded-xl text-xs font-bold transition-all bg-chzzk text-black whitespace-nowrap shadow';
+          sec.classList.remove('hidden');
+        } else {
+          btn.className = 'px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-white whitespace-nowrap';
+          sec.classList.add('hidden');
+        }
+      });
+
+      if (tab === 'videos') {
+        populateCategorySelect('v-category');
+        renderVideoList();
+      }
+      if (tab === 'categories') renderCategoryList();
+      if (tab === 'notices') renderNoticeList();
+      if (tab === 'requests') renderRequestList();
+      if (tab === 'settings') loadSettingsForm();
+    }
+
+    /* 1. VIDEOS MANAGEMENT */
+    function populateCategorySelect(elementId) {
+      const categories = getStoredData(STORAGE_KEYS.CATEGORIES, DEFAULT_CATEGORIES);
+      const select = document.getElementById(elementId);
+      select.innerHTML = categories.map(c => `<option value="${c}">${c}</option>`).join('');
+    }
+
+    function handleVideoSubmit(e) {
+      e.preventDefault();
+      const id = document.getElementById('v-id').value;
+      const category = document.getElementById('v-category').value;
+      const date = document.getElementById('v-date').value;
+      const pinned = document.getElementById('v-pinned').checked;
+      const title = document.getElementById('v-title').value.trim();
+      const url = document.getElementById('v-url').value.trim();
+      const desc = document.getElementById('v-desc').value.trim();
+
+      let videos = getStoredData(STORAGE_KEYS.VIDEOS, DEFAULT_VIDEOS);
+
+      if (id) {
+        const idx = videos.findIndex(v => v.id === id);
+        if (idx !== -1) {
+          videos[idx] = { ...videos[idx], category, date, pinned, title, url, desc };
+        }
+      } else {
+        videos.unshift({
+          id: 'v_' + Date.now(),
+          category,
+          date,
+          pinned,
+          title,
+          url,
+          desc
+        });
+      }
+
+      setStoredData(STORAGE_KEYS.VIDEOS, videos);
+      resetVideoForm();
+      renderVideoList();
+      alert('영상 정보가 성공적으로 저장되었습니다.');
+    }
+
+    function resetVideoForm() {
+      document.getElementById('video-form').reset();
+      document.getElementById('v-id').value = '';
+      document.getElementById('video-form-title').innerHTML = `<i class="fa-solid fa-circle-plus"></i> 새 다시보기 영상 등록`;
+      document.getElementById('btn-video-submit').innerHTML = `<i class="fa-solid fa-floppy-disk"></i> 영상 데이터 저장`;
+      document.getElementById('v-date').value = new Date().toISOString().split('T')[0];
+    }
+
+    function editVideo(id) {
+      const videos = getStoredData(STORAGE_KEYS.VIDEOS, DEFAULT_VIDEOS);
+      const video = videos.find(v => v.id === id);
+      if(!video) return;
+
+      populateCategorySelect('v-category');
+      document.getElementById('v-id').value = video.id;
+      document.getElementById('v-category').value = video.category;
+      document.getElementById('v-date').value = video.date;
+      document.getElementById('v-pinned').checked = !!video.pinned;
+      document.getElementById('v-title').value = video.title;
+      document.getElementById('v-url').value = video.url;
+      document.getElementById('v-desc').value = video.desc || '';
+
+      document.getElementById('video-form-title').innerHTML = `<i class="fa-solid fa-pen-to-square"></i> 영상 정보 수정`;
+      document.getElementById('btn-video-submit').innerHTML = `<i class="fa-solid fa-arrows-rotate"></i> 수정 완료`;
+      
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function deleteVideo(id) {
+      if(!confirm('해당 영상을 정말 삭제하시겠습니까?')) return;
+      let videos = getStoredData(STORAGE_KEYS.VIDEOS, DEFAULT_VIDEOS);
+      videos = videos.filter(v => v.id !== id);
+      setStoredData(STORAGE_KEYS.VIDEOS, videos);
+      renderVideoList();
+    }
+
+    function moveVideoOrder(index, direction) {
+      let videos = getStoredData(STORAGE_KEYS.VIDEOS, DEFAULT_VIDEOS);
+      const target = index + direction;
+      if (target < 0 || target >= videos.length) return;
+
+      const temp = videos[index];
+      videos[index] = videos[target];
+      videos[target] = temp;
+
+      setStoredData(STORAGE_KEYS.VIDEOS, videos);
+      renderVideoList();
+    }
+
+    function renderVideoList() {
+      const container = document.getElementById('video-list-container');
+      const search = document.getElementById('filter-video-search').value.trim().toLowerCase();
+      let videos = getStoredData(STORAGE_KEYS.VIDEOS, DEFAULT_VIDEOS);
+
+      document.getElementById('count-videos').textContent = videos.length;
+
+      if (search) {
+        videos = videos.filter(v => v.title.toLowerCase().includes(search) || v.category.toLowerCase().includes(search));
+      }
+
+      if (videos.length === 0) {
+        container.innerHTML = `<div class="bg-chzzk-card p-8 rounded-xl text-center text-slate-500 text-xs border border-chzzk-border">등록된 영상이 없습니다.</div>`;
+        return;
+      }
+
+      container.innerHTML = videos.map((v, idx) => `
+        <div class="bg-chzzk-card border border-chzzk-border p-3.5 rounded-xl flex items-center justify-between gap-3 hover:border-slate-700 transition-colors">
+          
+          <div class="flex items-center gap-3 flex-1 min-w-0">
+            <!-- Order Buttons -->
+            <div class="flex flex-col gap-0.5">
+              <button onclick="moveVideoOrder(${idx}, -1)" class="p-1 rounded bg-slate-900 hover:bg-slate-800 text-[10px] text-slate-300 ${idx === 0 ? 'opacity-30 cursor-not-allowed' : ''}"><i class="fa-solid fa-chevron-up"></i></button>
+              <button onclick="moveVideoOrder(${idx}, 1)" class="p-1 rounded bg-slate-900 hover:bg-slate-800 text-[10px] text-slate-300 ${idx === videos.length - 1 ? 'opacity-30 cursor-not-allowed' : ''}"><i class="fa-solid fa-chevron-down"></i></button>
+            </div>
+
+            <!-- Content -->
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-chzzk/10 text-chzzk border border-chzzk/30">[${v.category}]</span>
+                ${v.pinned ? `<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30">고정</span>` : ''}
+                <span class="text-xs text-slate-500">${v.date}</span>
+              </div>
+              <h4 class="font-bold text-xs sm:text-sm text-slate-100 truncate mt-1">${v.title}</h4>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex items-center gap-1.5 whitespace-nowrap">
+            <button onclick="editVideo('${v.id}')" class="px-2.5 py-1.5 rounded-lg text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700"><i class="fa-solid fa-pen"></i></button>
+            <button onclick="deleteVideo('${v.id}')" class="px-2.5 py-1.5 rounded-lg text-xs bg-red-950/40 hover:bg-red-900/60 text-red-300 border border-red-800/60"><i class="fa-solid fa-trash"></i></button>
+          </div>
+
+        </div>
+      `).join('');
+    }
+
+    /* 2. DYNAMIC CATEGORY MANAGEMENT */
+    function handleAddCategory(e) {
+      e.preventDefault();
+      const input = document.getElementById('cat-new-name');
+      const name = input.value.trim();
+      let categories = getStoredData(STORAGE_KEYS.CATEGORIES, DEFAULT_CATEGORIES);
+
+      if (categories.includes(name)) {
+        alert('이미 존재하는 카테고리 이름입니다.');
+        return;
+      }
+
+      categories.push(name);
+      setStoredData(STORAGE_KEYS.CATEGORIES, categories);
+      input.value = '';
+      renderCategoryList();
+      alert('새 카테고리가 추가되었습니다.');
+    }
+
+    function editCategory(index) {
+      let categories = getStoredData(STORAGE_KEYS.CATEGORIES, DEFAULT_CATEGORIES);
+      const oldCat = categories[index];
+      const newCat = prompt('카테고리 이름을 수정하세요:', oldCat);
+
+      if (newCat && newCat.trim() !== '') {
+        const trimmed = newCat.trim();
+        categories[index] = trimmed;
+        setStoredData(STORAGE_KEYS.CATEGORIES, categories);
+
+        let videos = getStoredData(STORAGE_KEYS.VIDEOS, DEFAULT_VIDEOS);
+        videos.forEach(v => {
+          if (v.category === oldCat) v.category = trimmed;
+        });
+        setStoredData(STORAGE_KEYS.VIDEOS, videos);
+
+        renderCategoryList();
+      }
+    }
+
+    function deleteCategory(index) {
+      let categories = getStoredData(STORAGE_KEYS.CATEGORIES, DEFAULT_CATEGORIES);
+      const targetCat = categories[index];
+
+      if (categories.length <= 1) {
+        alert('최소 1개 이상의 카테고리는 유지되어야 합니다.');
+        return;
+      }
+
+      if (!confirm(`'${targetCat}' 카테고리를 삭제하시겠습니까?`)) return;
+
+      categories.splice(index, 1);
+      setStoredData(STORAGE_KEYS.CATEGORIES, categories);
+
+      let videos = getStoredData(STORAGE_KEYS.VIDEOS, DEFAULT_VIDEOS);
+      videos.forEach(v => {
+        if (v.category === targetCat) v.category = categories[0] || '기타';
+      });
+      setStoredData(STORAGE_KEYS.VIDEOS, videos);
+
+      renderCategoryList();
+    }
+
+    function moveCategoryOrder(index, direction) {
+      let categories = getStoredData(STORAGE_KEYS.CATEGORIES, DEFAULT_CATEGORIES);
+      const target = index + direction;
+      if (target < 0 || target >= categories.length) return;
+
+      const temp = categories[index];
+      categories[index] = categories[target];
+      categories[target] = temp;
+
+      setStoredData(STORAGE_KEYS.CATEGORIES, categories);
+      renderCategoryList();
+    }
+
+    function renderCategoryList() {
+      const container = document.getElementById('category-list-container');
+      const categories = getStoredData(STORAGE_KEYS.CATEGORIES, DEFAULT_CATEGORIES);
+
+      container.innerHTML = categories.map((cat, idx) => `
+        <div class="bg-slate-950 border border-chzzk-border p-3 rounded-xl flex items-center justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <div class="flex items-center gap-1">
+              <button onclick="moveCategoryOrder(${idx}, -1)" class="p-1 rounded bg-slate-900 hover:bg-slate-800 text-[10px] text-slate-300 ${idx === 0 ? 'opacity-30 cursor-not-allowed' : ''}"><i class="fa-solid fa-chevron-up"></i></button>
+              <button onclick="moveCategoryOrder(${idx}, 1)" class="p-1 rounded bg-slate-900 hover:bg-slate-800 text-[10px] text-slate-300 ${idx === categories.length - 1 ? 'opacity-30 cursor-not-allowed' : ''}"><i class="fa-solid fa-chevron-down"></i></button>
+            </div>
+            <span class="font-bold text-xs sm:text-sm text-slate-200">${cat}</span>
+          </div>
+
+          <div class="flex items-center gap-1.5">
+            <button onclick="editCategory(${idx})" class="px-2.5 py-1 rounded bg-slate-800 text-slate-200 text-xs border border-slate-700">수정</button>
+            <button onclick="deleteCategory(${idx})" class="px-2.5 py-1 rounded bg-red-950/40 text-red-300 text-xs border border-red-800/60">삭제</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    /* 3. NOTICE MANAGEMENT */
+    function handleNoticeSubmit(e) {
+      e.preventDefault();
+      const id = document.getElementById('n-id').value;
+      const date = document.getElementById('n-date').value;
+      const asBanner = document.getElementById('n-as-banner').checked;
+      const title = document.getElementById('n-title').value.trim();
+      const desc = document.getElementById('n-desc').value.trim();
+
+      let notices = getStoredData(STORAGE_KEYS.NOTICES, []);
+
+      if (asBanner) {
+        notices.forEach(n => n.asBanner = false);
+      }
+
+      if (id) {
+        const idx = notices.findIndex(n => n.id === id);
+        if (idx !== -1) {
+          notices[idx] = { ...notices[idx], date, asBanner, title, desc };
+        }
+      } else {
+        notices.unshift({ id: 'n_' + Date.now(), date, asBanner, title, desc });
+      }
+
+      setStoredData(STORAGE_KEYS.NOTICES, notices);
+      resetNoticeForm();
+      renderNoticeList();
+      alert('공지사항이 저장되었습니다.');
+    }
+
+    function resetNoticeForm() {
+      document.getElementById('notice-form').reset();
+      document.getElementById('n-id').value = '';
+      document.getElementById('notice-form-title').innerHTML = `<i class="fa-solid fa-bullhorn"></i> 새 공지사항 작성`;
+      document.getElementById('n-date').value = new Date().toISOString().split('T')[0];
+    }
+
+    function deleteNotice(id) {
+      if(!confirm('공지사항을 삭제하시겠습니까?')) return;
+      let notices = getStoredData(STORAGE_KEYS.NOTICES, []);
+      notices = notices.filter(n => n.id !== id);
+      setStoredData(STORAGE_KEYS.NOTICES, notices);
+      renderNoticeList();
+    }
+
+    function renderNoticeList() {
+      const container = document.getElementById('notice-list-container');
+      const notices = getStoredData(STORAGE_KEYS.NOTICES, []);
+
+      if (notices.length === 0) {
+        container.innerHTML = `<div class="bg-chzzk-card p-6 rounded-xl text-center text-slate-500 text-xs border border-chzzk-border">등록된 공지가 없습니다.</div>`;
+        return;
+      }
+
+      container.innerHTML = notices.map(n => `
+        <div class="bg-chzzk-card border border-chzzk-border p-4 rounded-xl flex items-center justify-between gap-4">
+          <div class="space-y-1 min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-slate-400">${n.date}</span>
+              ${n.asBanner ? `<span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-chzzk text-black">띠배너 게시중</span>` : ''}
+            </div>
+            <h4 class="font-bold text-xs sm:text-sm text-slate-100 truncate">${n.title}</h4>
+          </div>
+          <button onclick="deleteNotice('${n.id}')" class="px-3 py-1.5 rounded-lg text-xs bg-red-950/40 text-red-300 border border-red-800/60 whitespace-nowrap">삭제</button>
+        </div>
+      `).join('');
+    }
+
+    /* 4. REQUEST BOARD MANAGEMENT */
+    function updateRequestStatus(id, newStatus) {
+      let requests = getStoredData(STORAGE_KEYS.REQUESTS, []);
+      const req = requests.find(r => r.id === id);
+      if (req) {
+        req.status = newStatus;
+        setStoredData(STORAGE_KEYS.REQUESTS, requests);
+        renderRequestList();
+      }
+    }
+
+    function deleteRequest(id) {
+      if (!confirm('요청 항목을 삭제하시겠습니까?')) return;
+      let requests = getStoredData(STORAGE_KEYS.REQUESTS, []);
+      requests = requests.filter(r => r.id !== id);
+      setStoredData(STORAGE_KEYS.REQUESTS, requests);
+      renderRequestList();
+    }
+
+    function renderRequestList() {
+      const container = document.getElementById('request-list-container');
+      const filterStatus = document.getElementById('req-filter-status').value;
+      let requests = getStoredData(STORAGE_KEYS.REQUESTS, []);
+
+      if (filterStatus !== 'ALL') {
+        requests = requests.filter(r => r.status === filterStatus);
+      }
+
+      if (requests.length === 0) {
+        container.innerHTML = `<div class="text-center py-8 text-slate-500 text-xs">등록된 요청글이 없습니다.</div>`;
+        return;
+      }
+
+      container.innerHTML = requests.map(req => `
+        <div class="bg-slate-950 border border-chzzk-border p-4 rounded-xl space-y-3">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-chzzk-border/50 pb-2">
+            <div class="flex items-center gap-2 text-xs">
+              <span class="font-extrabold text-chzzk">${req.type}</span>
+              <span class="font-bold text-slate-200">${req.author}</span>
+              <span class="text-slate-500 text-[11px]">(${req.date})</span>
+            </div>
+
+            <!-- Status Actions -->
+            <div class="flex items-center gap-1.5">
+              <button onclick="updateRequestStatus('${req.id}', '대기중')" class="px-2 py-1 rounded text-[10px] font-bold ${req.status === '대기중' ? 'bg-amber-500 text-black' : 'bg-slate-900 text-slate-400 hover:text-white'}">대기</button>
+              <button onclick="updateRequestStatus('${req.id}', '처리완료')" class="px-2 py-1 rounded text-[10px] font-bold ${req.status === '처리완료' ? 'bg-chzzk text-black' : 'bg-slate-900 text-slate-400 hover:text-white'}">완료</button>
+              <button onclick="updateRequestStatus('${req.id}', '거절됨')" class="px-2 py-1 rounded text-[10px] font-bold ${req.status === '거절됨' ? 'bg-red-500 text-white' : 'bg-slate-900 text-slate-400 hover:text-white'}">거절</button>
+              <button onclick="deleteRequest('${req.id}')" class="px-2 py-1 rounded text-[10px] bg-slate-800 text-red-400 hover:bg-red-950 border border-slate-700 ml-2"><i class="fa-solid fa-trash"></i></button>
+            </div>
+          </div>
+          <p class="text-xs text-slate-300 whitespace-pre-line leading-relaxed">${req.content}</p>
+        </div>
+      `).join('');
+    }
+
+    /* 5. SETTINGS & BACKUP */
+    function loadSettingsForm() {
+      const settings = getStoredData(STORAGE_KEYS.SETTINGS, DEFAULT_SETTINGS);
+      document.getElementById('set-site-title').value = settings.siteTitle || DEFAULT_SETTINGS.siteTitle;
+      document.getElementById('set-streamer-name').value = settings.streamerName || DEFAULT_SETTINGS.streamerName;
+    }
+
+    function handleSaveSettings(e) {
+      e.preventDefault();
+      const siteTitle = document.getElementById('set-site-title').value.trim();
+      const streamerName = document.getElementById('set-streamer-name').value.trim();
+
+      const settings = getStoredData(STORAGE_KEYS.SETTINGS, DEFAULT_SETTINGS);
+      settings.siteTitle = siteTitle;
+      settings.streamerName = streamerName;
+
+      setStoredData(STORAGE_KEYS.SETTINGS, settings);
+      applyBranding();
+      alert('사이트 브랜딩 설정이 저장이 완료되었습니다.');
+    }
+
+    function handleChangePassword(e) {
+      e.preventDefault();
+      const curr = document.getElementById('pass-current').value;
+      const next = document.getElementById('pass-new').value.trim();
+      const actualCurr = localStorage.getItem(STORAGE_KEYS.ADMIN_PASS) || 'admin1234';
+
+      if (curr !== actualCurr) {
+        alert('현재 비밀번호가 일치하지 않습니다.');
+        return;
+      }
+
+      if (!next) {
+        alert('새로운 비밀번호를 입력해주세요.');
+        return;
+      }
+
+      localStorage.setItem(STORAGE_KEYS.ADMIN_PASS, next);
+      document.getElementById('pass-current').value = '';
+      document.getElementById('pass-new').value = '';
+      alert('관리자 비밀번호가 성공적으로 변경되었습니다!');
+    }
+
+    function exportJSON() {
+      const exportObject = {
+        videos: getStoredData(STORAGE_KEYS.VIDEOS, DEFAULT_VIDEOS),
+        categories: getStoredData(STORAGE_KEYS.CATEGORIES, DEFAULT_CATEGORIES),
+        notices: getStoredData(STORAGE_KEYS.NOTICES, []),
+        requests: getStoredData(STORAGE_KEYS.REQUESTS, []),
+        settings: getStoredData(STORAGE_KEYS.SETTINGS, DEFAULT_SETTINGS)
+      };
+
+      const jsonStr = JSON.stringify(exportObject, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `chzzk_admin_backup_${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importJSON(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          const imported = JSON.parse(evt.target.result);
+          if (imported.videos) setStoredData(STORAGE_KEYS.VIDEOS, imported.videos);
+          if (imported.categories) setStoredData(STORAGE_KEYS.CATEGORIES, imported.categories);
+          if (imported.notices) setStoredData(STORAGE_KEYS.NOTICES, imported.notices);
+          if (imported.requests) setStoredData(STORAGE_KEYS.REQUESTS, imported.requests);
+          if (imported.settings) setStoredData(STORAGE_KEYS.SETTINGS, imported.settings);
+
+          alert('데이터 복원이 완료되었습니다!');
+          initDashboard();
+        } catch (err) {
+          alert('올바르지 않은 JSON 백업 파일 형식입니다.');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function resetDefaults() {
+      if (!confirm('모든 데이터(영상, 카테고리, 공지)를 데모 데이터로 초기화하시겠습니까?')) return;
+      localStorage.removeItem(STORAGE_KEYS.VIDEOS);
+      localStorage.removeItem(STORAGE_KEYS.CATEGORIES);
+      localStorage.removeItem(STORAGE_KEYS.NOTICES);
+      localStorage.removeItem(STORAGE_KEYS.REQUESTS);
+      localStorage.removeItem(STORAGE_KEYS.SETTINGS);
+      alert('초기화되었습니다.');
+      initDashboard();
+    }
+  </script>
+</body>
+</html>
