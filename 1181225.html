@@ -97,6 +97,9 @@
         <button id="tab-categories" onclick="switchTab('categories')" class="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-white whitespace-nowrap">
           <i class="fa-solid fa-tags mr-1.5"></i>동적 카테고리 설정
         </button>
+        <button id="tab-request-types" onclick="switchTab('request-types')" class="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-white whitespace-nowrap">
+          <i class="fa-solid fa-list-check mr-1.5"></i>시청자 요청 구분 관리
+        </button>
         <button id="tab-notices" onclick="switchTab('notices')" class="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-white whitespace-nowrap">
           <i class="fa-solid fa-bullhorn mr-1.5"></i>공지사항 & 배너
         </button>
@@ -183,6 +186,18 @@
             <button type="submit" class="bg-chzzk hover:bg-chzzk-hover text-black font-extrabold px-5 py-2.5 rounded-xl text-xs whitespace-nowrap">추가</button>
           </form>
           <div id="category-list-container" class="space-y-2 pt-4 border-t border-chzzk-border/60"></div>
+        </div>
+      </section>
+
+      <!-- SEC 2-1: REQUEST TYPES -->
+      <section id="sec-request-types" class="hidden space-y-6 max-w-4xl">
+        <div class="bg-chzzk-card border border-chzzk-border p-6 rounded-2xl shadow-xl space-y-5">
+          <h3 class="text-sm font-bold text-slate-100 flex items-center gap-2"><i class="fa-solid fa-list-check text-chzzk"></i> 시청자 요청 구분 관리</h3>
+          <form onsubmit="handleAddRequestType(event)" class="flex gap-2 pt-2 border-t border-chzzk-border/60">
+            <input type="text" id="req-type-new-name" placeholder="새 요청 구분 이름 (예: 자막 오류 제보)" required class="flex-1 bg-slate-950 border border-chzzk-border rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-chzzk">
+            <button type="submit" class="bg-chzzk hover:bg-chzzk-hover text-black font-extrabold px-5 py-2.5 rounded-xl text-xs whitespace-nowrap">추가</button>
+          </form>
+          <div id="request-type-list-container" class="space-y-2 pt-4 border-t border-chzzk-border/60"></div>
         </div>
       </section>
 
@@ -285,11 +300,7 @@
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-xs text-slate-300 mb-1 font-semibold">구분</label>
-            <select id="edit-req-type" class="w-full bg-slate-950 border border-chzzk-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-chzzk">
-              <option value="영상 누락/오류 신고">영상 누락/오류 신고</option>
-              <option value="타임라인 제보">타임라인 제보</option>
-              <option value="건의사항">건의사항</option>
-            </select>
+            <select id="edit-req-type" class="w-full bg-slate-950 border border-chzzk-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-chzzk"></select>
           </div>
           <div>
             <label class="block text-xs text-slate-300 mb-1 font-semibold">처리 상태</label>
@@ -320,7 +331,6 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
     import { getFirestore, doc, setDoc, onSnapshot, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
-    // 파이어베이스 설정값[cite: 5]
     const firebaseConfig = {
       apiKey: "AIzaSyDo0Cp5rBuDCnZJxDhPPOgzr0FF5IxY0f8",
       authDomain: "btjm-a4a4f.firebaseapp.com",
@@ -336,6 +346,7 @@
     let state = {
       videos: [],
       categories: ['저쳇', '게임', '음악', '합방', '기타'],
+      requestTypes: ['영상 누락/오류 신고', '타임라인 제보', '건의사항'],
       notices: [],
       settings: { siteTitle: '보젬 다시보기', streamerName: '치지직 방송 아카이브' }
     };
@@ -343,23 +354,22 @@
     let requests = [];
     let currentTab = 'videos';
 
-    // 데이터 실시간 동기화
     onSnapshot(doc(db, "archive", "mainData"), (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         state = {
           videos: data.videos || [],
           categories: data.categories || ['저쳇', '게임', '음악', '합방', '기타'],
+          requestTypes: data.requestTypes || ['영상 누락/오류 신고', '타임라인 제보', '건의사항'],
           notices: data.notices || [],
           settings: data.settings || state.settings
         };
         initDashboard();
       } else {
-        saveMainData(); // 문서 없으면 생성
+        saveMainData();
       }
     });
 
-    // 시청자 요청함 실시간 수신
     onSnapshot(collection(db, "requests"), (querySnap) => {
       requests = [];
       querySnap.forEach(docSnap => {
@@ -413,8 +423,10 @@
       document.getElementById('header-site-title').textContent = state.settings.siteTitle;
       document.getElementById('header-streamer-name').textContent = state.settings.streamerName;
       populateCategorySelect();
+      populateRequestTypeSelects();
       renderVideoList();
       renderCategoryList();
+      renderRequestTypeList();
       renderNoticeList();
       renderRequestList();
       loadSettingsForm();
@@ -422,7 +434,7 @@
 
     window.switchTab = function(tab) {
       currentTab = tab;
-      ['videos', 'categories', 'notices', 'requests', 'settings'].forEach(t => {
+      ['videos', 'categories', 'request-types', 'notices', 'requests', 'settings'].forEach(t => {
         const btn = document.getElementById(`tab-${t}`);
         const sec = document.getElementById(`sec-${t}`);
         if(t === tab) {
@@ -438,6 +450,13 @@
     function populateCategorySelect() {
       const select = document.getElementById('v-category');
       select.innerHTML = state.categories.map(c => `<option value="${c}">${c}</option>`).join('');
+    }
+
+    function populateRequestTypeSelects() {
+      const editSelect = document.getElementById('edit-req-type');
+      if (editSelect) {
+        editSelect.innerHTML = state.requestTypes.map(rt => `<option value="${rt}">${rt}</option>`).join('');
+      }
     }
 
     window.handleVideoSubmit = async function(e) {
@@ -562,6 +581,35 @@
       await saveMainData();
     };
 
+    /* Request Types */
+    window.handleAddRequestType = async function(e) {
+      e.preventDefault();
+      const input = document.getElementById('req-type-new-name');
+      const name = input.value.trim();
+      if (!state.requestTypes) state.requestTypes = [];
+      if (state.requestTypes.includes(name)) return alert('중복된 요청 구분입니다.');
+      state.requestTypes.push(name);
+      await saveMainData();
+      input.value = '';
+    };
+
+    function renderRequestTypeList() {
+      const container = document.getElementById('request-type-list-container');
+      if (!state.requestTypes) state.requestTypes = ['영상 누락/오류 신고', '타임라인 제보', '건의사항'];
+      container.innerHTML = state.requestTypes.map((rt, idx) => `
+        <div class="bg-slate-950 border border-chzzk-border p-3 rounded-xl flex items-center justify-between">
+          <span class="font-bold text-xs sm:text-sm text-slate-200">${rt}</span>
+          <button onclick="deleteRequestType(${idx})" class="px-2.5 py-1 rounded bg-red-950/40 text-red-300 text-xs border border-red-800/60">삭제</button>
+        </div>
+      `).join('');
+    }
+
+    window.deleteRequestType = async function(idx) {
+      if (state.requestTypes.length <= 1) return alert('최소 1개 이상 유지되어야 합니다.');
+      state.requestTypes.splice(idx, 1);
+      await saveMainData();
+    };
+
     /* Notices */
     window.handleNoticeSubmit = async function(e) {
       e.preventDefault();
@@ -624,7 +672,7 @@
       const req = requests.find(r => r.id === id);
       if (!req) return;
       document.getElementById('edit-req-id').value = req.id;
-      document.getElementById('edit-req-type').value = req.type || '건의사항';
+      document.getElementById('edit-req-type').value = req.type || (state.requestTypes[0] || '건의사항');
       document.getElementById('edit-req-author').value = req.author || '';
       document.getElementById('edit-req-status').value = req.status || '대기중';
       document.getElementById('edit-req-content').value = req.content || '';
